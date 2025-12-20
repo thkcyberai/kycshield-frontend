@@ -1,0 +1,334 @@
+import React, { useState, useEffect } from 'react';
+
+function LandingPage() {
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  // Responsive hook
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 768;
+  const isTablet = windowWidth >= 768 && windowWidth < 1024;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!email || !email.includes('@')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('https://api.kycshield.ai/api/v1/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'landing_page' })
+      });
+
+      if (response.ok) {
+        setSubmitted(true);
+        setEmail('');
+      } else {
+        const data = await response.json();
+        setError(data.detail || 'Something went wrong. Please try again.');
+      }
+    } catch (err) {
+      setError('Unable to connect. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(180deg, #010a13 0%, #0c1222 50%, #010a13 100%)',
+      color: 'white',
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      overflowX: 'hidden',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+
+      {/* Main Content */}
+      <main style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        textAlign: 'center'
+      }}>
+
+        {/* Logo */}
+        <img
+          src="/assets/KYCShield_logo_final.png"
+          alt="KYCShield.ai"
+          style={{
+            height: isMobile ? '60px' : isTablet ? '70px' : '80px',
+            width: 'auto',
+            marginBottom: isMobile ? '32px' : '48px'
+          }}
+        />
+
+        {/* Alert Badge */}
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          background: 'rgba(239, 68, 68, 0.15)',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          borderRadius: '50px',
+          padding: '8px 20px',
+          marginBottom: '32px'
+        }}>
+          <span style={{ fontSize: '14px' }}>🚨</span>
+          <span style={{
+            color: '#fca5a5',
+            fontSize: isMobile ? '13px' : '14px',
+            fontWeight: '500'
+          }}>
+            $3.1B lost to synthetic identity fraud in 2023
+          </span>
+        </div>
+
+        {/* Headline */}
+        <h1 style={{
+          fontSize: isMobile ? '36px' : isTablet ? '48px' : '64px',
+          fontWeight: '800',
+          lineHeight: '1.1',
+          margin: '0 0 24px 0',
+          letterSpacing: '-2px',
+          maxWidth: '900px'
+        }}>
+          <span style={{ color: 'white' }}>Stop </span>
+          <span style={{
+            background: 'linear-gradient(135deg, #c084fc, #a855f7, #7c3aed)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>Synthetic Identity Fraud</span>
+          <span style={{ color: 'white' }}> Before It Starts</span>
+        </h1>
+
+        {/* Subheadline */}
+        <p style={{
+          fontSize: isMobile ? '16px' : isTablet ? '18px' : '20px',
+          color: '#94a3b8',
+          lineHeight: '1.7',
+          maxWidth: '700px',
+          margin: '0 0 48px 0'
+        }}>
+          AI-powered KYC fraud detection that catches deepfake videos, forged documents, 
+          and synthetic identities with <span style={{ color: '#a78bfa', fontWeight: '600' }}>99.9% accuracy</span>. 
+          Built to defeat tools like ProKYC.
+        </p>
+
+        {/* Stats Row */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+          gap: isMobile ? '16px' : '48px',
+          marginBottom: '48px',
+          width: '100%',
+          maxWidth: '700px'
+        }}>
+          <div style={{
+            background: 'rgba(30, 41, 59, 0.5)',
+            border: '1px solid rgba(148, 163, 184, 0.1)',
+            borderRadius: '12px',
+            padding: isMobile ? '16px' : '24px'
+          }}>
+            <div style={{ fontSize: isMobile ? '28px' : '36px', fontWeight: '800', color: '#a78bfa' }}>99.9%</div>
+            <div style={{ color: '#64748b', fontSize: '12px', fontWeight: '600', letterSpacing: '0.5px', marginTop: '4px' }}>DEEPFAKE DETECTION</div>
+          </div>
+          <div style={{
+            background: 'rgba(30, 41, 59, 0.5)',
+            border: '1px solid rgba(148, 163, 184, 0.1)',
+            borderRadius: '12px',
+            padding: isMobile ? '16px' : '24px'
+          }}>
+            <div style={{ fontSize: isMobile ? '28px' : '36px', fontWeight: '800', color: '#a78bfa' }}>100%</div>
+            <div style={{ color: '#64748b', fontSize: '12px', fontWeight: '600', letterSpacing: '0.5px', marginTop: '4px' }}>DOCUMENT FRAUD</div>
+          </div>
+          <div style={{
+            background: 'rgba(30, 41, 59, 0.5)',
+            border: '1px solid rgba(148, 163, 184, 0.1)',
+            borderRadius: '12px',
+            padding: isMobile ? '16px' : '24px'
+          }}>
+            <div style={{ fontSize: isMobile ? '28px' : '36px', fontWeight: '800', color: '#a78bfa' }}>96.9%</div>
+            <div style={{ color: '#64748b', fontSize: '12px', fontWeight: '600', letterSpacing: '0.5px', marginTop: '4px' }}>FACE MATCHING</div>
+          </div>
+        </div>
+
+        {/* Newsletter Signup Form */}
+        {!submitted ? (
+          <div style={{
+            width: '100%',
+            maxWidth: '500px'
+          }}>
+            <h2 style={{
+              fontSize: isMobile ? '20px' : '24px',
+              fontWeight: '600',
+              color: 'white',
+              marginBottom: '16px'
+            }}>
+              Get Early Access
+            </h2>
+            <p style={{
+              fontSize: '15px',
+              color: '#94a3b8',
+              marginBottom: '24px'
+            }}>
+              Join our newsletter for launch updates and exclusive beta access.
+            </p>
+
+            <form onSubmit={handleSubmit} style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: '12px',
+              marginBottom: '16px'
+            }}>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                style={{
+                  flex: 1,
+                  padding: '16px 20px',
+                  fontSize: '16px',
+                  border: '1px solid rgba(148, 163, 184, 0.2)',
+                  borderRadius: '8px',
+                  background: 'rgba(30, 41, 59, 0.5)',
+                  color: 'white',
+                  outline: 'none'
+                }}
+              />
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={{
+                  padding: '16px 32px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: isSubmitting 
+                    ? '#475569' 
+                    : 'linear-gradient(135deg, #a78bfa, #7c3aed)',
+                  color: 'white',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.3s ease',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {isSubmitting ? 'Subscribing...' : 'Subscribe'}
+              </button>
+            </form>
+
+            {error && (
+              <p style={{
+                color: '#fca5a5',
+                fontSize: '14px',
+                marginTop: '8px'
+              }}>{error}</p>
+            )}
+
+            <p style={{
+              fontSize: '13px',
+              color: '#64748b',
+              marginTop: '16px'
+            }}>
+              🔒 No spam. Unsubscribe anytime.
+            </p>
+          </div>
+        ) : (
+          <div style={{
+            background: 'rgba(34, 197, 94, 0.1)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            borderRadius: '12px',
+            padding: '32px',
+            maxWidth: '500px'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: '600',
+              color: '#4ade80',
+              marginBottom: '12px'
+            }}>You're on the list!</h2>
+            <p style={{
+              fontSize: '16px',
+              color: '#94a3b8',
+              lineHeight: '1.6'
+            }}>
+              Thanks for subscribing. We'll notify you when KYCShield launches 
+              and send you exclusive beta access opportunities.
+            </p>
+          </div>
+        )}
+
+        {/* Beta Tester CTA */}
+        <div style={{
+          marginTop: '48px',
+          padding: '24px',
+          background: 'rgba(124, 58, 237, 0.1)',
+          border: '1px solid rgba(124, 58, 237, 0.3)',
+          borderRadius: '12px',
+          maxWidth: '500px'
+        }}>
+          <p style={{
+            fontSize: '15px',
+            color: '#c4b5fd',
+            margin: 0
+          }}>
+            🧪 <strong>Want to be a Beta Tester?</strong> We're selecting 5 testers 
+            to stress-test our platform. Subscribe above and DM us on{' '}
+            <a 
+              href="https://www.linkedin.com/company/kycshield" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ color: '#a78bfa', textDecoration: 'underline' }}
+            >
+              LinkedIn
+            </a>{' '}
+            with your profile.
+          </p>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer style={{
+        textAlign: 'center',
+        padding: '32px 20px',
+        color: '#64748b',
+        fontSize: '14px',
+        borderTop: '1px solid rgba(148, 163, 184, 0.1)'
+      }}>
+        <p style={{ margin: '0 0 8px 0' }}>© 2025 KYCShield by Facti.ai</p>
+        <p style={{ margin: 0, fontSize: '13px' }}>
+          <a href="/contact" style={{ color: '#94a3b8', textDecoration: 'none' }}>Contact</a>
+          {' • '}
+          <a href="/about" style={{ color: '#94a3b8', textDecoration: 'none' }}>About</a>
+        </p>
+      </footer>
+    </div>
+  );
+}
+
+export default LandingPage;
