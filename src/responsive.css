@@ -531,3 +531,11 @@
     font-size: 24px !important;
   }
 }
+
+/* --- Cloudflare Pages hero video fix --- */
+.hero-video-wrapper video {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 1;
+}
