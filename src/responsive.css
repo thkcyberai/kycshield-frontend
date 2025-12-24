@@ -539,3 +539,31 @@
   visibility: visible !important;
   z-index: 1;
 }
+
+/* --- Cloudflare Pages hero video definitive fix --- */
+.hero-video-container {
+  position: relative !important;
+  z-index: 0 !important;
+}
+
+.hero-video-wrapper {
+  position: absolute !important;
+  inset: 0;
+  z-index: 1 !important;
+}
+
+.hero-video-wrapper video {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 1 !important;
+}
+
+/* Push overlays ABOVE video but BELOW content */
+.hero-overlay,
+.hero-gradient,
+.hero-background {
+  position: absolute !important;
+  inset: 0;
+  z-index: 2 !important;
+}
