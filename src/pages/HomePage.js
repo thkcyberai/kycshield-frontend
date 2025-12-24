@@ -46,11 +46,42 @@ function HomePage() {
   return (
     <div style={{
       minHeight: '100vh',
+      position: 'relative',
+      zIndex: 1,
       background: '#010a13',
       color: 'white',
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       overflowX: 'hidden'
     }}>
+
+      
+      {/* Background Video Layer */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 0,
+        overflow: 'hidden',
+        pointerEvents: 'none'
+      }}>
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: 0.25
+          }}
+        >
+          <source src="/assets/shield-animation.mp4" type="video/mp4" />
+        </video>
+      </div>
+
 
       {/* Header/Nav */}
       <header style={{
@@ -195,6 +226,8 @@ function HomePage() {
       {/* Hero Section */}
       <section style={{
         minHeight: '100vh',
+      position: 'relative',
+      zIndex: 1,
         maxWidth: '1600px',
         margin: '0 auto',
         padding: isMobile ? '80px 20px 30px' : isTablet ? '100px 40px 50px' : '0 100px',
