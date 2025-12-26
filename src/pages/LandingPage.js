@@ -64,7 +64,7 @@ function LandingPage() {
         textAlign: 'center'
       }}>
         <img
-          src="/assets/KYCShield_logo_final.png"
+          src="https://89d495ad.kycshield-frontend.pages.dev/assets/KYCShield_logo_final.png"
           alt="KYCShield.ai"
           style={{
             height: isMobile ? '50px' : isTablet ? '60px' : '70px',
