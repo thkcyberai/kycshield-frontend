@@ -20,7 +20,9 @@ yarn-error.log*
 .DS_Store
 
 # large media assets
-*.mp4
 *.mov
 *.avi
 *.webm
+
+# allow published mp4 assets for GitHub Pages
+!assets/*.mp4
