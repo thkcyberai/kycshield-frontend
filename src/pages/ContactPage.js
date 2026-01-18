@@ -69,7 +69,7 @@ function ContactPage() {
       {/* Header */}
       <header style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: isMobile ? '16px 20px' : '20px 60px', borderBottom: '1px solid rgba(255,255,255,0.1)'}}>
         <div style={{display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer'}} onClick={() => navigate('/')}>
-          <img src="/assets/KYCLogo.png" alt="KYCShield Logo" style={{height: isMobile ? '32px' : '44px', width: 'auto'}} />
+          <img src="/assets/KYCShield_logo_final.png" alt="KYCShield Logo" style={{height: isMobile ? '32px' : '44px', width: 'auto'}} />
           <span style={{fontSize: isMobile ? '24px' : '36px', fontWeight: '600', color: 'white'}}>KYCShield</span>
         </div>
 

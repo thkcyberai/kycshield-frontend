@@ -103,7 +103,7 @@ function HomePage() {
           gap: '12px'
         }}>
           <img
-            src="/assets/KYCLogo.png"
+            src="/assets/KYCShield_logo_final.png"
             alt="KYCShield Logo"
             style={{
               height: isMobile ? '40px' : '44px',

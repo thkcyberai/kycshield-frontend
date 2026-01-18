@@ -207,7 +207,7 @@ function UnifiedKYCPage() {
         borderBottom: '1px solid rgba(148, 163, 184, 0.1)'
       }}>
         <div style={{display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer'}} onClick={() => navigate('/')}>
-          <img src="/assets/KYCLogo.png" alt="KYCShield Logo" style={{height: '52px', width: 'auto'}} />
+          <img src="/assets/KYCShield_logo_final.png" alt="KYCShield Logo" style={{height: '52px', width: 'auto'}} />
           <span style={{ fontSize: isMobile ? '18px' : '36px', fontWeight: '600', color: 'white' }}>KYCShield</span>
         </div>
         <div style={{display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '20px'}}>

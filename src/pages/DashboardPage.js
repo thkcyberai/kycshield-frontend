@@ -348,7 +348,7 @@ function DashboardPage() {
         borderBottom: '1px solid rgba(148, 163, 184, 0.1)'
       }}>
         <div style={{display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer'}} onClick={() => navigate('/')}>
-          <img src="/assets/KYCLogo.png" alt="KYCShield Logo" style={{height: '48px', width: 'auto'}} />
+          <img src="/assets/KYCShield_logo_final.png" alt="KYCShield Logo" style={{height: '48px', width: 'auto'}} />
           <span style={{ fontSize: isMobile ? '20px' : '36px', fontWeight: '600', color: 'white', letterSpacing: '-0.5px' }}>KYCShield</span>
         </div>
         <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
