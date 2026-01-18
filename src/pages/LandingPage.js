@@ -41,7 +41,7 @@ function LandingPage() {
           zIndex: 0
         }}
       >
-        <source src="https://d005124a.kycshield-frontend.pages.dev/assets/shield-animation.mp4" type="video/mp4" />
+        <source src="/assets/shield-animation.mp4" type="video/mp4" />
       </video>
       <div style={{
         position: 'absolute',
@@ -64,7 +64,7 @@ function LandingPage() {
         textAlign: 'center'
       }}>
         <img
-          src="https://89d495ad.kycshield-frontend.pages.dev/assets/KYCShield_logo_final.png"
+          src="/assets/KYCShield_logo_final.png"
           alt="KYCShield.ai"
           style={{
             height: isMobile ? '50px' : isTablet ? '60px' : '70px',
