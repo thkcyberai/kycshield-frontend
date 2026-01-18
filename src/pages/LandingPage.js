@@ -41,7 +41,7 @@ function LandingPage() {
           zIndex: 0
         }}
       >
-        <source src="/assets/shield-animation.mp4" type="video/mp4" />
+        <source src="/assets/ShesVerified.mp4" type="video/mp4" />
       </video>
       <div style={{
         position: 'absolute',
