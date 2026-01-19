@@ -78,7 +78,7 @@ function HomePage() {
             opacity: 0.25
           }}
         >
-          <source src="/assets/shield-animation.mp4" type="video/mp4" />
+          <source src="/assets/shield-animation-v2.mp4" type="video/mp4" />
         </video>
       </div>
 
@@ -363,7 +363,7 @@ function HomePage() {
                 boxShadow: '0 25px 50px rgba(0, 0, 0, 0.4)'
               }}
             >
-              <source src="/assets/shield-animation.mp4" type="video/mp4" />
+              <source src="/assets/shield-animation-v2.mp4" type="video/mp4" />
             </video>
           </div>
         </div>
