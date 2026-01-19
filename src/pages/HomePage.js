@@ -55,34 +55,6 @@ function HomePage() {
     }}>
 
       
-      {/* Background Video Layer */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        zIndex: 0,
-        overflow: 'hidden',
-        pointerEvents: 'none'
-      }}>
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            opacity: 0.25
-          }}
-        >
-          <source src="/assets/shield-animation-v2.mp4" type="video/mp4" />
-        </video>
-      </div>
-
-
       {/* Header/Nav */}
       <header style={{
         display: 'flex',
@@ -363,7 +335,7 @@ function HomePage() {
                 boxShadow: '0 25px 50px rgba(0, 0, 0, 0.4)'
               }}
             >
-              <source src="/assets/shield-animation-v2.mp4" type="video/mp4" />
+              <source src="/assets/ShesVerified.mp4" type="video/mp4" />
             </video>
           </div>
         </div>
