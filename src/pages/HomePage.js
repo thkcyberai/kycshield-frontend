@@ -311,7 +311,7 @@ function HomePage() {
           justifyContent: 'center',
           alignItems: 'center',
           position: 'relative',
-          marginTop: isMobile ? '-20px' : isTablet ? '-40px' : '-220px',
+          marginTop: isMobile ? '16px' : isTablet ? '8px' : '0px',
           order: 0
         }}>
           <div style={{
