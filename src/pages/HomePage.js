@@ -82,12 +82,6 @@ function HomePage() {
               width: 'auto'
             }}
           />
-          <span style={{
-            fontSize: isMobile ? '28px' : '36px',
-            fontWeight: '600',
-            color: 'white',
-            letterSpacing: '-0.5px'
-          }}>KYCShield</span>
         </div>
 
         {/* Demo Button + Hamburger Menu */}
