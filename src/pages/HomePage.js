@@ -77,8 +77,7 @@ function HomePage() {
           <img
             src="/assets/KYCShield_logo_final.png"
             alt="KYCShield Logo"
-            style={{
-              height: isMobile ? '40px' : '44px',
+            style={{                height: isMobile ? '52px' : '64px',
               width: 'auto'
             }}
           />
