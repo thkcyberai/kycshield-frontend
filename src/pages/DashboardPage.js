@@ -348,7 +348,7 @@ function DashboardPage() {
         borderBottom: '1px solid rgba(148, 163, 184, 0.1)'
       }}>
         <div style={{display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer'}} onClick={() => navigate('/')}>
-          <img src="/assets/KYCShield_logo_final.png" alt="KYCShield Logo" style={{height: '48px', width: 'auto'}} />
+          <img src="/assets/KYCShield_logo_final.png" alt="KYCShield Logo" style={{height: '64px', width: 'auto'}} />
         </div>
         <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
           <button onClick={() => navigate('/unified')} style={{
