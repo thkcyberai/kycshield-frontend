@@ -26,3 +26,10 @@ yarn-error.log*
 
 # allow published mp4 assets for GitHub Pages
 !assets/*.mp4
+# Local backups and artifacts
+*.backup
+*.backup_*
+*.backup.*
+*.bak
+*~ 
+.DS_Store
