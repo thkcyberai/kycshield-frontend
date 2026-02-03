@@ -64,6 +64,26 @@ function UnifiedKYCPage() {
     }
   };
 
+
+  const formatConfidencePercent = (serviceData) => {
+    if (!serviceData) return '0.0%';
+
+    const rp = Number(serviceData.real_probability ?? NaN);
+    const fp = Number(serviceData.fake_probability ?? NaN);
+
+    let pct = Number(serviceData.confidence || 0) * 100;
+    if (!Number.isNaN(rp) && !Number.isNaN(fp)) {
+      pct = Math.max(rp, fp) * 100;
+    }
+
+    if (pct >= 99.95 && pct < 100) pct = 99.9;
+
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+
+    return `${pct.toFixed(1)}%`;
+  };
+
   const runUnifiedKYC = async () => {
     if (!videoFile || !selfieFile || !documentFile) {
       setError('Please upload all three files: Video, Selfie, and ID Document');

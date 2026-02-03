@@ -196,6 +196,37 @@ function DashboardPage() {
     return isGood ? { color: 'green', text: d.verdict || 'REAL' } : { color: 'red', text: d.verdict || 'FAKE' };
   };
 
+  const formatConfidencePercent = () => {
+    if (!results || !results.data) return '0.0%';
+
+    // Face: show similarity score as-is (already in percent-like format in UI)
+    if (results.type === 'face') {
+      const sim = Number(results.data.similarity || 0);
+      return `${sim.toFixed(1)}%`;
+    }
+
+    // Video/document: confidence is 0..1. Avoid showing 100.0% unless truly absolute.
+    const c = Number(results.data.confidence || 0);
+    let pct = c * 100;
+
+    // If we have explicit probabilities, prefer the max (more honest).
+    const rp = Number(results.data.real_probability ?? NaN);
+    const fp = Number(results.data.fake_probability ?? NaN);
+    if (!Number.isNaN(rp) && !Number.isNaN(fp)) {
+      pct = Math.max(rp, fp) * 100;
+    }
+
+    // Cap display at 99.9% unless it is mathematically 100%.
+    // This prevents rounding artifacts like 0.9996 -> 100.0%
+    if (pct >= 99.95 && pct < 100) pct = 99.9;
+
+    // Clamp
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+
+    return `${pct.toFixed(1)}%`;
+  };
+
   const tabs = [
     { id: 'video', label: 'Video Deepfake', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="14" height="12" rx="2" /><path d="M16 10l4-2v8l-4-2v-4z" /></svg>, color: '#a78bfa' },
     { id: 'document', label: 'Document Fraud', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="16" y2="17" /></svg>, color: '#a78bfa' },
@@ -530,7 +561,7 @@ function DashboardPage() {
               <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px'}}>
                 <div style={{background: 'rgba(15, 23, 42, 0.5)', borderRadius: '12px', padding: '24px', textAlign: 'center'}}>
                   <p style={{color: '#94a3b8', fontSize: '15px', margin: '0 0 6px 0'}}>Confidence</p>
-                  <p style={{fontSize: '28px', fontWeight: 'bold', margin: 0, color: 'white'}}>{results.type === 'face' ? (results.data.similarity || 0).toFixed(1) : ((results.data.confidence || 0) * 100).toFixed(1)}%</p>
+                  <p style={{fontSize: '28px', fontWeight: 'bold', margin: 0, color: 'white'}}>{formatConfidencePercent()}</p>
                 </div>
                 <div style={{background: 'rgba(15, 23, 42, 0.5)', borderRadius: '12px', padding: '24px', textAlign: 'center'}}>
                   <p style={{color: '#94a3b8', fontSize: '15px', margin: '0 0 6px 0'}}>Type</p>
