@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function DashboardPage() {
@@ -11,6 +11,13 @@ function DashboardPage() {
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+
+  // Async video job state
+  const [videoJobId, setVideoJobId] = useState(null);
+  const [videoJobStatus, setVideoJobStatus] = useState(null);
+  const [videoElapsedSec, setVideoElapsedSec] = useState(0);
+  const [videoProgressText, setVideoProgressText] = useState('');
+  const pollCancelRef = useRef(false);
 
   // Feedback state
   const [showFeedback, setShowFeedback] = useState(false);
@@ -37,12 +44,22 @@ function DashboardPage() {
   };
 
   const clearAll = () => {
+    pollCancelRef.current = true;
+
     setVideoFile(null);
     setDocumentFile(null);
     setSelfieFile(null);
     setIdFile(null);
+
+    setIsAnalyzing(false);
     setResults(null);
     setError(null);
+
+    setVideoJobId(null);
+    setVideoJobStatus(null);
+    setVideoElapsedSec(0);
+    setVideoProgressText('');
+
     setShowFeedback(false);
     setFeedbackSelected(null);
     setActualLabel(null);
@@ -53,6 +70,120 @@ function DashboardPage() {
   const handleFileChange = (setter) => (e) => {
     const file = e.target.files[0];
     if (file) setter(file);
+  };
+
+  const safeReadJson = async (res) => {
+    const contentType = (res.headers.get('content-type') || '').toLowerCase();
+    const rawText = await res.text();
+    let data = null;
+
+    if (rawText && contentType.includes('application/json')) {
+      try { data = JSON.parse(rawText); } catch { data = null; }
+    }
+    if (!data && rawText) {
+      try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
+    }
+    return { data, rawText };
+  };
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  
+  const formatJobStatus = (s) => {
+    if (!s) return '';
+    if (s === 'done') return 'Completed';
+    if (s === 'processing') return 'Processing';
+    if (s === 'queued') return 'Queued';
+    if (s === 'failed') return 'Failed';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+
+
+  const pollVideoJob = async (jobId) => {
+    pollCancelRef.current = false;
+
+    setVideoJobId(jobId);
+    setVideoJobStatus('processing');
+    setVideoElapsedSec(0);
+    setVideoProgressText('Processing video. This can take a bit.');
+
+    const startedAt = Date.now();
+    const maxMs = 2 * 60 * 1000; // 2 minutes
+    const intervalMs = 2000;
+
+    while (true) {
+      if (pollCancelRef.current) {
+        setVideoProgressText('');
+        setVideoJobStatus(null);
+        setVideoJobId(null);
+        return;
+      }
+
+      const elapsed = Date.now() - startedAt;
+      setVideoElapsedSec(Math.floor(elapsed / 1000));
+
+      if (elapsed > maxMs) {
+        setError(`Video analysis is taking longer than expected. Job ID: ${jobId}`);
+        setIsAnalyzing(false);
+        setVideoJobStatus('timeout');
+        setVideoProgressText('');
+        return;
+      }
+
+      let res;
+      try {
+        res = await fetch(API_BASE + `/api/v1/video-deepfake/status/${jobId}`, {
+          method: 'GET',
+          headers: { 'Authorization': 'Bearer ' + getToken() },
+        });
+      } catch {
+        setError('Network error while checking status. Please retry.');
+        setIsAnalyzing(false);
+        setVideoJobStatus('failed');
+        setVideoProgressText('');
+        return;
+      }
+
+      const { data, rawText } = await safeReadJson(res);
+
+      if (!res.ok) {
+        const detail = (data && (data.detail || data.error)) || rawText || `Request failed (HTTP ${res.status})`;
+
+        if (res.status === 401) {
+          setError('Session expired. Please log in again.');
+        } else {
+          setError(`Status check failed (HTTP ${res.status}). ${detail}`);
+        }
+
+        setIsAnalyzing(false);
+        setVideoJobStatus('failed');
+        setVideoProgressText('');
+        return;
+      }
+
+      const status = (data && data.status) || '';
+      setVideoJobStatus(status || 'processing');
+
+      if (status === 'done') {
+        const result = (data && data.result) ? data.result : data;
+        setResults({ type: 'video', data: result });
+        if (result && result.usage_log_id) setShowFeedback(true);
+
+        setIsAnalyzing(false);
+        setVideoProgressText('');
+        return;
+      }
+
+      if (status === 'failed') {
+        const errMsg = (data && (data.error || (data.result && data.result.error))) || 'Video analysis failed.';
+        setError(errMsg);
+        setIsAnalyzing(false);
+        setVideoProgressText('');
+        return;
+      }
+
+      await sleep(intervalMs);
+    }
   };
 
   const analyzeVideo = async () => {
@@ -67,12 +198,23 @@ function DashboardPage() {
       return;
     }
 
-    setIsAnalyzing(true); setError(null); setResults(null);
-    setShowFeedback(false); setFeedbackSubmitted(false);
+    pollCancelRef.current = false;
+
+    setIsAnalyzing(true);
+    setError(null);
+    setResults(null);
+    setShowFeedback(false);
+    setFeedbackSubmitted(false);
+
+    setVideoJobId(null);
+    setVideoJobStatus(null);
+    setVideoElapsedSec(0);
+    setVideoProgressText('Uploading video...');
 
     try {
       const formData = new FormData();
       formData.append('video', videoFile);
+      formData.append('page_source', 'dashboard');
 
       const res = await fetch(API_BASE + '/api/v1/video-deepfake/verify', {
         method: 'POST',
@@ -80,14 +222,7 @@ function DashboardPage() {
         body: formData
       });
 
-      // Read response safely (not always JSON, especially on edge/network failures)
-      const contentType = (res.headers.get('content-type') || '').toLowerCase();
-      const rawText = await res.text();
-
-      let data = null;
-      if (rawText && contentType.includes('application/json')) {
-        try { data = JSON.parse(rawText); } catch { data = null; }
-      }
+      const { data, rawText } = await safeReadJson(res);
 
       if (!res.ok) {
         const detail =
@@ -98,20 +233,24 @@ function DashboardPage() {
         return;
       }
 
-      // Success
-      if (!data && rawText) {
-        // Some proxies strip content-type. Best-effort parse.
-        try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
+      // Async job mode
+      if (data && data.job_id) {
+        setVideoProgressText('Video received. Processing started.');
+        await pollVideoJob(data.job_id);
+        return;
       }
 
+      // Sync mode (backward compatible)
       setResults({ type: 'video', data });
       if (data && data.usage_log_id) setShowFeedback(true);
 
     } catch (err) {
-      // True network-layer errors land here (timeout, aborted, offline)
       setError('Network error while uploading/analyzing the video. Please retry.');
     } finally {
-      setIsAnalyzing(false);
+      // If we entered async mode, pollVideoJob will turn this off.
+      // If we stayed sync, this turns it off here.
+      setVideoProgressText((prev) => prev && videoJobId ? prev : '');
+      setIsAnalyzing((prev) => prev && videoJobId ? prev : false);
     }
   };
 
@@ -233,10 +372,9 @@ function DashboardPage() {
     { id: 'face', label: 'Face Matching', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>, color: '#a78bfa' },
   ];
 
-  // Feedback Modal Component
   const FeedbackModal = () => {
     if (!showFeedback || feedbackSubmitted) return null;
-    
+
     return (
       <div style={{
         marginTop: '24px',
@@ -249,7 +387,7 @@ function DashboardPage() {
         <h4 style={{ color: '#a78bfa', margin: '0 0 16px 0', fontSize: '18px' }}>
           🎯 Did we get it right?
         </h4>
-        
+
         <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '20px' }}>
           <button
             onClick={() => setFeedbackSelected('correct')}
@@ -265,7 +403,7 @@ function DashboardPage() {
             <div style={{ fontSize: '32px', marginBottom: '4px' }}>👍</div>
             <div style={{ color: '#22c55e', fontWeight: '600', fontSize: '14px' }}>Correct</div>
           </button>
-          
+
           <button
             onClick={() => setFeedbackSelected('wrong')}
             style={{
@@ -280,7 +418,7 @@ function DashboardPage() {
             <div style={{ fontSize: '32px', marginBottom: '4px' }}>👎</div>
             <div style={{ color: '#ef4444', fontWeight: '600', fontSize: '14px' }}>Wrong</div>
           </button>
-          
+
           <button
             onClick={() => setFeedbackSelected('unsure')}
             style={{
@@ -389,7 +527,6 @@ function DashboardPage() {
     );
   };
 
-  // Feedback Success Message
   const FeedbackSuccess = () => {
     if (!feedbackSubmitted) return null;
     return (
@@ -409,7 +546,6 @@ function DashboardPage() {
 
   return (
     <div style={{minHeight: '100vh', background: '#010a13', color: 'white', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'}}>
-      {/* Header */}
       <header style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -477,23 +613,59 @@ function DashboardPage() {
         </div>
 
         <div style={{ background: 'rgba(30, 41, 59, 0.4)', border: '1px solid rgba(148, 163, 184, 0.1)', borderRadius: '24px', padding: isMobile ? '20px' : '50px' }}>
-
           {activeTab === 'video' && (
             <div>
               <h3 style={{margin: '0 0 12px 0', color: '#a78bfa', fontSize: '28px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '12px'}}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="14" height="12" rx="2" /><path d="M16 10l4-2v8l-4-2v-4z" /></svg> Video Deepfake Detection</h3>
               <p style={{color: '#94a3b8', marginBottom: '35px', fontSize: '15px'}}>Upload a video to detect AI-generated deepfakes with 99.90% accuracy.</p>
-              <div style={{ border: '2px dashed rgba(148, 163, 184, 0.2)', borderRadius: '20px', padding: isMobile ? '30px' : '70px', textAlign: 'center', marginBottom: '35px', background: 'rgba(15, 23, 42, 0.4)' }}>
+
+              <div style={{ border: '2px dashed rgba(148, 163, 184, 0.2)', borderRadius: '20px', padding: isMobile ? '30px' : '70px', textAlign: 'center', marginBottom: '20px', background: 'rgba(15, 23, 42, 0.4)' }}>
                 <input type="file" accept="video/*" onChange={handleFileChange(setVideoFile)} style={{display: 'none'}} id="video-upload" />
                 <label htmlFor="video-upload" style={{cursor: 'pointer'}}>
                   <div style={{marginBottom: '12px'}}><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg></div>
                   {videoFile ? <p style={{color: '#a78bfa', fontWeight: '500', fontSize: '15px'}}>{videoFile.name}</p> : <p style={{color: '#64748b', fontSize: '15px'}}>Drop video or click to upload</p>}
                 </label>
               </div>
+
+              {(isAnalyzing || videoJobId) && (
+                <div style={{
+                  marginBottom: '15px',
+                  padding: '14px 16px',
+                  background: 'rgba(15, 23, 42, 0.45)',
+                  border: '1px solid rgba(148, 163, 184, 0.15)',
+                  borderRadius: '12px',
+                  color: '#cbd5e1',
+                  fontSize: '14px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: '10px',
+                  flexWrap: 'wrap'
+                }}>
+                  <div>
+                    <div style={{ color: '#94a3b8', marginBottom: '4px' }}>Status</div>
+                    <div style={{ fontWeight: '600', color: '#e2e8f0' }}>
+                      {formatJobStatus(videoJobStatus) || videoProgressText || (isAnalyzing ? 'Working...' : '')}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#94a3b8', marginBottom: '4px' }}>Elapsed</div>
+                    <div style={{ fontWeight: '600', color: '#e2e8f0' }}>{videoElapsedSec}s</div>
+                  </div>
+                  {videoJobId && (
+                    <div style={{ minWidth: '260px' }}>
+                      <div style={{ color: '#94a3b8', marginBottom: '4px' }}>Job</div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '12px', color: '#a78bfa' }}>{videoJobId}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div style={{display: 'flex', gap: '12px'}}>
                 <button onClick={analyzeVideo} disabled={!videoFile || isAnalyzing} style={{ flex: 1, padding: '22px', background: videoFile && !isAnalyzing ? 'linear-gradient(135deg, #a78bfa, #7c3aed)' : 'rgba(51, 65, 85, 0.5)', border: 'none', borderRadius: '10px', color: 'white', fontWeight: '600', fontSize: '17px', cursor: videoFile && !isAnalyzing ? 'pointer' : 'not-allowed' }}>
                   {isAnalyzing ? 'Analyzing...' : 'Analyze Video'}
                 </button>
-                <button onClick={clearAll} style={{ padding: '22px 36px', background: 'transparent', border: '1px solid rgba(148, 163, 184, 0.2)', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer', fontSize: '15px' }}>Clear</button>
+                <button onClick={clearAll} style={{ padding: '22px 36px', background: 'transparent', border: '1px solid rgba(148, 163, 184, 0.2)', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer', fontSize: '15px' }}>
+                  Clear
+                </button>
               </div>
             </div>
           )}

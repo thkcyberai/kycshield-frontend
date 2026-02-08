@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function UnifiedKYCPage() {
@@ -10,6 +10,11 @@ function UnifiedKYCPage() {
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState('');
   const navigate = useNavigate();
+
+  // Async video job state
+  const [videoJobId, setVideoJobId] = useState(null);
+  const [videoElapsedSec, setVideoElapsedSec] = useState(0);
+  const pollCancelRef = useRef(false);
 
   // Feedback state
   const [showFeedback, setShowFeedback] = useState(false);
@@ -32,12 +37,15 @@ function UnifiedKYCPage() {
   };
 
   const clearAll = () => {
+    pollCancelRef.current = true;
     setVideoFile(null);
     setSelfieFile(null);
     setDocumentFile(null);
     setResults(null);
     setError(null);
     setProgress('');
+    setVideoJobId(null);
+    setVideoElapsedSec(0);
     setShowFeedback(false);
     setFeedbackData({});
     setFeedbackSubmitted({});
@@ -64,6 +72,68 @@ function UnifiedKYCPage() {
     }
   };
 
+  const safeReadJson = async (res) => {
+    const contentType = (res.headers.get('content-type') || '').toLowerCase();
+    const rawText = await res.text();
+    let data = null;
+
+    if (rawText && contentType.includes('application/json')) {
+      try { data = JSON.parse(rawText); } catch { data = null; }
+    }
+    if (!data && rawText) {
+      try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
+    }
+    return { data, rawText };
+  };
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  const pollVideoJob = async (token, jobId) => {
+    pollCancelRef.current = false;
+    setVideoJobId(jobId);
+    setVideoElapsedSec(0);
+
+    const startedAt = Date.now();
+    const maxMs = 2 * 60 * 1000; // 2 minutes
+    const intervalMs = 2000;
+
+    while (true) {
+      if (pollCancelRef.current) {
+        throw new Error('Canceled');
+      }
+
+      const elapsed = Date.now() - startedAt;
+      setVideoElapsedSec(Math.floor(elapsed / 1000));
+
+      if (elapsed > maxMs) {
+        throw new Error(`Video analysis is taking longer than expected. Job ID: ${jobId}`);
+      }
+
+      const res = await fetch(API_BASE + `/api/v1/video-deepfake/status/${jobId}`, {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + token },
+      });
+
+      const { data, rawText } = await safeReadJson(res);
+
+      if (!res.ok) {
+        const detail = (data && (data.detail || data.error)) || rawText || `Request failed (HTTP ${res.status})`;
+        if (res.status === 401) throw new Error('Session expired. Please log in again.');
+        throw new Error(`Status check failed (HTTP ${res.status}). ${detail}`);
+      }
+
+      const status = (data && data.status) || '';
+      if (status === 'done') {
+        return (data && data.result) ? data.result : data;
+      }
+      if (status === 'failed') {
+        const errMsg = (data && (data.error || (data.result && data.result.error))) || 'Video analysis failed.';
+        throw new Error(errMsg);
+      }
+
+      await sleep(intervalMs);
+    }
+  };
 
   const formatConfidencePercent = (serviceData) => {
     if (!serviceData) return '0.0%';
@@ -90,28 +160,45 @@ function UnifiedKYCPage() {
       return;
     }
 
+    pollCancelRef.current = false;
+
     setIsAnalyzing(true);
     setError(null);
     setResults(null);
     setShowFeedback(false);
     setFeedbackData({});
     setFeedbackSubmitted({});
+    setVideoJobId(null);
+    setVideoElapsedSec(0);
 
     const token = getToken();
     const analysisResults = { video: null, document: null, face: null };
 
     try {
-      // Step 1: Video Deepfake
-      setProgress('Analyzing video for deepfakes...');
+      // Step 1: Video Deepfake (sync or async)
+      setProgress('Uploading video for deepfake detection...');
       const videoForm = new FormData();
       videoForm.append('video', videoFile);
       videoForm.append('page_source', 'unified_kyc');
+
       const videoRes = await fetch(API_BASE + '/api/v1/video-deepfake/verify', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token },
         body: videoForm
       });
-      analysisResults.video = await videoRes.json();
+
+      const { data: videoData, rawText: videoRaw } = await safeReadJson(videoRes);
+      if (!videoRes.ok) {
+        const detail = (videoData && (videoData.detail || videoData.error)) || videoRaw || `Request failed (HTTP ${videoRes.status})`;
+        throw new Error(`Video deepfake failed (HTTP ${videoRes.status}). ${detail}`);
+      }
+
+      if (videoData && videoData.job_id) {
+        setProgress('Processing video deepfake job...');
+        analysisResults.video = await pollVideoJob(token, videoData.job_id);
+      } else {
+        analysisResults.video = videoData;
+      }
 
       // Step 2: Document Fraud
       setProgress('Checking document authenticity...');
@@ -139,6 +226,8 @@ function UnifiedKYCPage() {
       analysisResults.face = await faceRes.json();
 
       setProgress('');
+      setVideoJobId(null);
+      setVideoElapsedSec(0);
 
       const videoOK = analysisResults.video.is_real || analysisResults.video.verdict === 'REAL';
       const docOK = analysisResults.document.verdict === 'GENUINE' || analysisResults.document.is_real;
@@ -162,14 +251,19 @@ function UnifiedKYCPage() {
       }
 
     } catch (err) {
-      setError('Error: ' + err.message);
+      if ((err && err.message) === 'Canceled') {
+        setError('Canceled.');
+      } else {
+        setError('Error: ' + (err?.message || String(err)));
+      }
       setProgress('');
+      setVideoJobId(null);
+      setVideoElapsedSec(0);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  // Feedback Component for each service
   const ServiceFeedback = ({ service, label, usageLogId }) => {
     const [selected, setSelected] = useState(null);
     const [actualLabel, setActualLabel] = useState(null);
@@ -228,7 +322,7 @@ function UnifiedKYCPage() {
       }}>
         <div style={{display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer'}} onClick={() => navigate('/')}>
           <img src="/assets/KYCShield_logo_final.png" alt="KYCShield Logo" style={{height: '64px', width: 'auto'}} />
-                  </div>
+        </div>
         <div style={{display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '20px'}}>
           <button onClick={() => navigate('/dashboard')} style={{
             padding: isMobile ? '10px 12px' : '18px 32px',
@@ -253,9 +347,7 @@ function UnifiedKYCPage() {
           </p>
         </div>
 
-        {/* Upload Cards */}
-        <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '40px'}}>
-          {/* Video */}
+        <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px'}}>
           <div style={{
             background: 'rgba(30, 41, 59, 0.4)',
             border: videoFile ? '2px solid #a78bfa' : '1px solid rgba(148, 163, 184, 0.1)',
@@ -272,7 +364,6 @@ function UnifiedKYCPage() {
             }}>{videoFile ? videoFile.name : 'Click to upload'}</label>
           </div>
 
-          {/* Selfie */}
           <div style={{
             background: 'rgba(30, 41, 59, 0.4)',
             border: selfieFile ? '2px solid #a78bfa' : '1px solid rgba(148, 163, 184, 0.1)',
@@ -289,7 +380,6 @@ function UnifiedKYCPage() {
             }}>{selfieFile ? selfieFile.name : 'Click to upload'}</label>
           </div>
 
-          {/* Document */}
           <div style={{
             background: 'rgba(30, 41, 59, 0.4)',
             border: documentFile ? '2px solid #a78bfa' : '1px solid rgba(148, 163, 184, 0.1)',
@@ -307,14 +397,44 @@ function UnifiedKYCPage() {
           </div>
         </div>
 
-        {/* Buttons */}
+        {(isAnalyzing && (progress || videoJobId)) && (
+          <div style={{
+            marginBottom: '18px',
+            padding: '14px 16px',
+            background: 'rgba(15, 23, 42, 0.45)',
+            border: '1px solid rgba(148, 163, 184, 0.15)',
+            borderRadius: '12px',
+            color: '#cbd5e1',
+            fontSize: '14px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: '10px',
+            flexWrap: 'wrap'
+          }}>
+            <div>
+              <div style={{ color: '#94a3b8', marginBottom: '4px' }}>Progress</div>
+              <div style={{ fontWeight: '600', color: '#e2e8f0' }}>{progress || 'Working...'}</div>
+            </div>
+            <div>
+              <div style={{ color: '#94a3b8', marginBottom: '4px' }}>Elapsed</div>
+              <div style={{ fontWeight: '600', color: '#e2e8f0' }}>{videoElapsedSec}s</div>
+            </div>
+            {videoJobId && (
+              <div style={{ minWidth: '260px' }}>
+                <div style={{ color: '#94a3b8', marginBottom: '4px' }}>Video Job</div>
+                <div style={{ fontFamily: 'monospace', fontSize: '12px', color: '#a78bfa' }}>{videoJobId}</div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div style={{display: 'flex', gap: '20px', justifyContent: 'center', marginBottom: '50px'}}>
           <button onClick={runUnifiedKYC} disabled={!videoFile || !selfieFile || !documentFile || isAnalyzing} style={{
             padding: isMobile ? '16px 20px' : '22px 60px',
             background: videoFile && selfieFile && documentFile && !isAnalyzing ? 'linear-gradient(135deg, #a78bfa, #7c3aed)' : 'rgba(51, 65, 85, 0.5)',
             border: 'none', borderRadius: '12px', color: 'white', fontSize: isMobile ? '14px' : '20px', fontWeight: '600',
             cursor: videoFile && selfieFile && documentFile && !isAnalyzing ? 'pointer' : 'not-allowed'
-          }}>{isAnalyzing ? progress || 'Analyzing...' : '🔍 Run Complete KYC Check'}</button>
+          }}>{isAnalyzing ? (progress || 'Analyzing...') : '🔍 Run Complete KYC Check'}</button>
           <button onClick={clearAll} style={{
             padding: isMobile ? '16px 16px' : '22px 40px', background: 'transparent',
             border: '1px solid rgba(148, 163, 184, 0.2)', borderRadius: '12px',
@@ -329,7 +449,6 @@ function UnifiedKYCPage() {
 
         {results && (
           <div>
-            {/* Overall Verdict */}
             <div style={{
               padding: '40px', borderRadius: '24px',
               background: results.overall === 'PASS' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
@@ -348,24 +467,21 @@ function UnifiedKYCPage() {
               )}
             </div>
 
-            {/* Individual Results with Feedback */}
             <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px'}}>
-              {/* Video Result */}
               <div style={{
                 background: 'rgba(30, 41, 59, 0.4)',
                 border: '1px solid', borderColor: results.video.passed ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)',
                 borderRadius: '20px', padding: '30px', textAlign: 'center'
               }}>
-                <div style={{fontSize: '36px', marginBottom: '14px'}}>{results.video.passed ? '✅' : '❌'}</div>
+                <div style={{fontSize: '36px', marginBottom: '14px'}}>{results.video.passed ? '✅' : ' ❌'}</div>
                 <h4 style={{margin: '0 0 10px 0', color: '#a78bfa', fontSize: '20px', fontWeight: '600'}}>Video Deepfake</h4>
                 <p style={{color: results.video.passed ? '#4ade80' : '#f87171', fontWeight: '700', margin: '8px 0', fontSize: '22px'}}>
                   {results.video.verdict || (results.video.is_real ? 'REAL' : 'FAKE')}
                 </p>
-                <p style={{color: '#94a3b8', fontSize: '16px', margin: 0}}>{((results.video.confidence || 0) * 100).toFixed(1)}% confidence</p>
+                <p style={{color: '#94a3b8', fontSize: '16px', margin: 0}}>{formatConfidencePercent(results.video)} confidence</p>
                 {showFeedback && <ServiceFeedback service="video" label="Video" usageLogId={results.video.usage_log_id} />}
               </div>
 
-              {/* Face Result */}
               <div style={{
                 background: 'rgba(30, 41, 59, 0.4)',
                 border: '1px solid', borderColor: results.face.passed ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)',
@@ -380,7 +496,6 @@ function UnifiedKYCPage() {
                 {showFeedback && <ServiceFeedback service="face" label="Face" usageLogId={results.face.usage_log_id} />}
               </div>
 
-              {/* Document Result */}
               <div style={{
                 background: 'rgba(30, 41, 59, 0.4)',
                 border: '1px solid', borderColor: results.document.passed ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)',
@@ -391,7 +506,7 @@ function UnifiedKYCPage() {
                 <p style={{color: results.document.passed ? '#4ade80' : '#f87171', fontWeight: '700', margin: '8px 0', fontSize: '22px'}}>
                   {results.document.verdict || (results.document.is_real ? 'GENUINE' : 'FRAUDULENT')}
                 </p>
-                <p style={{color: '#94a3b8', fontSize: '16px', margin: 0}}>{((results.document.confidence || 0) * 100).toFixed(1)}% confidence</p>
+                <p style={{color: '#94a3b8', fontSize: '16px', margin: 0}}>{formatConfidencePercent(results.document)} confidence</p>
                 {showFeedback && <ServiceFeedback service="document" label="Document" usageLogId={results.document.usage_log_id} />}
               </div>
             </div>
