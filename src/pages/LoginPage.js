@@ -19,6 +19,7 @@ function LoginPage() {
       const res = await fetch(API_BASE + '/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // IMPORTANT: allow refresh cookie to be stored
         body: JSON.stringify({ email, password })
       });
 
@@ -27,7 +28,10 @@ function LoginPage() {
       }
 
       const data = await res.json();
+
+      // TEMPORARY: keep localStorage until full refactor
       localStorage.setItem('kycshield_token', data.access_token);
+
       navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Login failed');
@@ -52,8 +56,7 @@ function LoginPage() {
       padding: '40px 20px'
     }}>
       <div style={{width: '100%', maxWidth: '480px'}}>
-        
-        {/* Logo & Branding */}
+
         <div style={{textAlign: 'center', marginBottom: '48px'}}>
           <div style={{
             display: 'inline-flex',
@@ -93,7 +96,6 @@ function LoginPage() {
           }}>AI-Powered Identity Verification</p>
         </div>
 
-        {/* Warning Banner */}
         <div style={{
           background: 'rgba(239, 68, 68, 0.08)',
           border: '1px solid rgba(239, 68, 68, 0.2)',
@@ -114,7 +116,6 @@ function LoginPage() {
           </div>
         </div>
 
-        {/* Login Card */}
         <div style={{
           background: 'rgba(30, 41, 59, 0.5)',
           backdropFilter: 'blur(20px)',
@@ -130,7 +131,7 @@ function LoginPage() {
             fontWeight: '600',
             letterSpacing: '-0.3px'
           }}>Sign in to your account</h2>
-          
+
           {error && (
             <div style={{
               background: 'rgba(239, 68, 68, 0.1)',
@@ -173,8 +174,6 @@ function LoginPage() {
                   transition: 'all 0.2s ease',
                   fontWeight: '500'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#60a5fa'}
-                onBlur={(e) => e.target.style.borderColor = 'rgba(148, 163, 184, 0.2)'}
               />
             </div>
 
@@ -206,8 +205,6 @@ function LoginPage() {
                   transition: 'all 0.2s ease',
                   fontWeight: '500'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#60a5fa'}
-                onBlur={(e) => e.target.style.borderColor = 'rgba(148, 163, 184, 0.2)'}
               />
             </div>
 
@@ -217,135 +214,38 @@ function LoginPage() {
               style={{
                 width: '100%',
                 padding: '16px',
-                background: isLoading ? '#475569' : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                background: isLoading
+                  ? 'rgba(59, 130, 246, 0.5)'
+                  : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
                 border: 'none',
                 borderRadius: '12px',
                 color: 'white',
                 fontSize: '16px',
                 fontWeight: '600',
                 cursor: isLoading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.3s ease',
-                boxShadow: isLoading ? 'none' : '0 8px 24px rgba(59, 130, 246, 0.3)',
-                letterSpacing: '0.3px'
+                transition: 'all 0.2s ease'
               }}
-              onMouseEnter={(e) => !isLoading && (e.target.style.transform = 'translateY(-2px)', e.target.style.boxShadow = '0 12px 32px rgba(59, 130, 246, 0.4)')}
-              onMouseLeave={(e) => (e.target.style.transform = 'translateY(0)', e.target.style.boxShadow = '0 8px 24px rgba(59, 130, 246, 0.3)')}
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
-          <div style={{
-            marginTop: '24px',
-            textAlign: 'center',
-            paddingTop: '24px',
-            borderTop: '1px solid rgba(148, 163, 184, 0.1)'
-          }}>
+          <div style={{marginTop: '24px', textAlign: 'center'}}>
             <button
               onClick={handleDemoLogin}
               style={{
-                background: 'none',
+                background: 'transparent',
                 border: 'none',
                 color: '#60a5fa',
-                cursor: 'pointer',
                 fontSize: '14px',
-                fontWeight: '600',
-                textDecoration: 'none',
-                transition: 'color 0.2s ease'
+                fontWeight: '500',
+                cursor: 'pointer'
               }}
-              onMouseEnter={(e) => e.target.style.color = '#93c5fd'}
-              onMouseLeave={(e) => e.target.style.color = '#60a5fa'}
             >
-              Use Demo Credentials →
+              Use demo credentials
             </button>
           </div>
         </div>
-
-        {/* Stats */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '16px',
-          marginTop: '40px'
-        }}>
-          <div style={{
-            background: 'rgba(30, 41, 59, 0.4)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: '16px',
-            padding: '20px 16px',
-            textAlign: 'center',
-            border: '1px solid rgba(148, 163, 184, 0.1)'
-          }}>
-            <p style={{
-              color: '#60a5fa',
-              fontSize: '28px',
-              fontWeight: '700',
-              margin: 0,
-              letterSpacing: '-0.5px'
-            }}>99.9%</p>
-            <p style={{
-              color: '#94a3b8',
-              fontSize: '13px',
-              margin: '6px 0 0 0',
-              fontWeight: '500'
-            }}>Detection Rate</p>
-          </div>
-          <div style={{
-            background: 'rgba(30, 41, 59, 0.4)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: '16px',
-            padding: '20px 16px',
-            textAlign: 'center',
-            border: '1px solid rgba(148, 163, 184, 0.1)'
-          }}>
-            <p style={{
-              color: '#a78bfa',
-              fontSize: '28px',
-              fontWeight: '700',
-              margin: 0,
-              letterSpacing: '-0.5px'
-            }}>&lt;1s</p>
-            <p style={{
-              color: '#94a3b8',
-              fontSize: '13px',
-              margin: '6px 0 0 0',
-              fontWeight: '500'
-            }}>Response Time</p>
-          </div>
-          <div style={{
-            background: 'rgba(30, 41, 59, 0.4)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: '16px',
-            padding: '20px 16px',
-            textAlign: 'center',
-            border: '1px solid rgba(148, 163, 184, 0.1)'
-          }}>
-            <p style={{
-              color: '#34d399',
-              fontSize: '28px',
-              fontWeight: '700',
-              margin: 0,
-              letterSpacing: '-0.5px'
-            }}>5+</p>
-            <p style={{
-              color: '#94a3b8',
-              fontSize: '13px',
-              margin: '6px 0 0 0',
-              fontWeight: '500'
-            }}>Attack Types</p>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <p style={{
-          textAlign: 'center',
-          color: '#64748b',
-          fontSize: '13px',
-          marginTop: '40px',
-          fontWeight: '500'
-        }}>
-          © 2025 KYCShield by Trusi.ai · Protecting against synthetic identity fraud
-        </p>
       </div>
     </div>
   );
