@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -7,6 +8,7 @@ function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const API_BASE = 'https://api.kycshield.ai';
 
@@ -19,7 +21,7 @@ function LoginPage() {
       const res = await fetch(API_BASE + '/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // IMPORTANT: allow refresh cookie to be stored
+        credentials: 'include',
         body: JSON.stringify({ email, password })
       });
 
@@ -29,8 +31,8 @@ function LoginPage() {
 
       const data = await res.json();
 
-      // TEMPORARY: keep localStorage until full refactor
-      localStorage.setItem('kycshield_token', data.access_token);
+      // Store access token in memory only
+      login(data.access_token);
 
       navigate('/dashboard');
     } catch (err) {
@@ -75,8 +77,7 @@ function LoginPage() {
               justifyContent: 'center',
               fontSize: '32px',
               fontWeight: '700',
-              color: 'white',
-              boxShadow: '0 8px 24px rgba(59, 130, 246, 0.4)'
+              color: 'white'
             }}>K</div>
           </div>
           <h1 style={{
@@ -85,14 +86,12 @@ function LoginPage() {
             fontWeight: '700',
             background: 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%)',
             WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            letterSpacing: '-0.5px'
+            WebkitTextFillColor: 'transparent'
           }}>KYCShield</h1>
           <p style={{
             margin: 0,
             color: '#94a3b8',
-            fontSize: '16px',
-            fontWeight: '500'
+            fontSize: '16px'
           }}>AI-Powered Identity Verification</p>
         </div>
 
@@ -107,8 +106,7 @@ function LoginPage() {
           <div style={{
             color: '#fca5a5',
             fontSize: '15px',
-            lineHeight: '1.6',
-            fontWeight: '500'
+            lineHeight: '1.6'
           }}>
             <strong style={{color: '#ef4444'}}>$4.6B+</strong> lost to synthetic identity fraud annually.
             <br/>
@@ -121,15 +119,13 @@ function LoginPage() {
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(148, 163, 184, 0.1)',
           borderRadius: '24px',
-          padding: '48px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+          padding: '48px'
         }}>
           <h2 style={{
             color: 'white',
             margin: '0 0 32px 0',
             fontSize: '24px',
-            fontWeight: '600',
-            letterSpacing: '-0.3px'
+            fontWeight: '600'
           }}>Sign in to your account</h2>
 
           {error && (
@@ -140,26 +136,19 @@ function LoginPage() {
               padding: '14px 18px',
               marginBottom: '24px',
               color: '#fca5a5',
-              fontSize: '14px',
-              fontWeight: '500'
+              fontSize: '14px'
             }}>{error}</div>
           )}
 
           <form onSubmit={handleLogin}>
             <div style={{marginBottom: '24px'}}>
-              <label style={{
-                display: 'block',
-                color: '#cbd5e1',
-                marginBottom: '10px',
-                fontSize: '14px',
-                fontWeight: '600',
-                letterSpacing: '0.3px'
-              }}>Email Address</label>
+              <label style={{ display: 'block', color: '#cbd5e1', marginBottom: '10px', fontSize: '14px' }}>
+                Email Address
+              </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
                 required
                 style={{
                   width: '100%',
@@ -167,30 +156,19 @@ function LoginPage() {
                   background: 'rgba(15, 23, 42, 0.6)',
                   border: '1px solid rgba(148, 163, 184, 0.2)',
                   borderRadius: '12px',
-                  color: 'white',
-                  fontSize: '15px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'all 0.2s ease',
-                  fontWeight: '500'
+                  color: 'white'
                 }}
               />
             </div>
 
             <div style={{marginBottom: '32px'}}>
-              <label style={{
-                display: 'block',
-                color: '#cbd5e1',
-                marginBottom: '10px',
-                fontSize: '14px',
-                fontWeight: '600',
-                letterSpacing: '0.3px'
-              }}>Password</label>
+              <label style={{ display: 'block', color: '#cbd5e1', marginBottom: '10px', fontSize: '14px' }}>
+                Password
+              </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
                 required
                 style={{
                   width: '100%',
@@ -198,12 +176,7 @@ function LoginPage() {
                   background: 'rgba(15, 23, 42, 0.6)',
                   border: '1px solid rgba(148, 163, 184, 0.2)',
                   borderRadius: '12px',
-                  color: 'white',
-                  fontSize: '15px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'all 0.2s ease',
-                  fontWeight: '500'
+                  color: 'white'
                 }}
               />
             </div>
@@ -222,8 +195,7 @@ function LoginPage() {
                 color: 'white',
                 fontSize: '16px',
                 fontWeight: '600',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease'
+                cursor: isLoading ? 'not-allowed' : 'pointer'
               }}
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
@@ -238,7 +210,6 @@ function LoginPage() {
                 border: 'none',
                 color: '#60a5fa',
                 fontSize: '14px',
-                fontWeight: '500',
                 cursor: 'pointer'
               }}
             >

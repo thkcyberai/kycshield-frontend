@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 function DashboardPage() {
   const [activeTab, setActiveTab] = useState('video');
@@ -133,8 +134,8 @@ function DashboardPage() {
       let res;
       try {
         res = await fetch(API_BASE + `/api/v1/video-deepfake/status/${jobId}`, {
-          method: 'GET',
-          headers: { 'Authorization': 'Bearer ' + getToken() },
+          credentials: 'include', method: 'GET',
+          headers: { 'Authorization': 'Bearer ' + accessToken },
         });
       } catch {
         setError('Network error while checking status. Please retry.');
@@ -217,8 +218,8 @@ function DashboardPage() {
       formData.append('page_source', 'dashboard');
 
       const res = await fetch(API_BASE + '/api/v1/video-deepfake/verify', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + getToken() },
+        credentials: 'include', method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + accessToken },
         body: formData
       });
 
@@ -262,8 +263,8 @@ function DashboardPage() {
       const formData = new FormData();
       formData.append('document', documentFile);
       const res = await fetch(API_BASE + '/api/v1/document/verify', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + getToken() },
+        credentials: 'include', method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + accessToken },
         body: formData
       });
       const data = await res.json();
@@ -282,8 +283,8 @@ function DashboardPage() {
       formData.append('selfie', selfieFile);
       formData.append('id_photo', idFile);
       const res = await fetch(API_BASE + '/api/v1/face/verify', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + getToken() },
+        credentials: 'include', method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + accessToken },
         body: formData
       });
       const data = await res.json();
@@ -297,9 +298,9 @@ function DashboardPage() {
     if (!results?.data?.usage_log_id || !feedbackSelected) return;
     try {
       const res = await fetch(API_BASE + '/api/v1/beta/feedback', {
-        method: 'POST',
+        credentials: 'include', method: 'POST',
         headers: {
-          'Authorization': 'Bearer ' + getToken(),
+          'Authorization': 'Bearer ' + accessToken,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
