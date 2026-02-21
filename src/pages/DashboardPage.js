@@ -12,6 +12,7 @@ function DashboardPage() {
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { accessToken, isBootstrapping, logout: authLogout } = useAuth();
 
   // Async video job state
   const [videoJobId, setVideoJobId] = useState(null);
@@ -37,11 +38,11 @@ function DashboardPage() {
 
   const API_BASE = 'https://api.kycshield.ai';
 
-  const getToken = () => localStorage.getItem('kycshield_token');
+  const getToken = () => null;
 
   const handleLogout = () => {
-    localStorage.removeItem('kycshield_token');
-    navigate('/');
+    authLogout();
+    navigate('/login');
   };
 
   const clearAll = () => {
