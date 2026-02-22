@@ -33,3 +33,9 @@ yarn-error.log*
 *.bak
 *~ 
 .DS_Store
+
+# local scratch
+backups/
+fix_dashboard_token.js
+transform_dashboard.js
+src/pages/DashboardPage.js.pre_secure_transform
