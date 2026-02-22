@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 function UnifiedKYCPage() {
   const [videoFile, setVideoFile] = useState(null);
@@ -10,6 +11,7 @@ function UnifiedKYCPage() {
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState('');
   const navigate = useNavigate();
+  const { accessToken } = useAuth();
 
   // Async video job state
   const [videoJobId, setVideoJobId] = useState(null);
@@ -29,7 +31,7 @@ function UnifiedKYCPage() {
   }, []);
 
   const API_BASE = 'https://api.kycshield.ai';
-  const getToken = () => localStorage.getItem('kycshield_token');
+  const getToken = () => accessToken || localStorage.getItem('kycshield_token');
 
   const handleLogout = () => {
     localStorage.removeItem('kycshield_token');
@@ -162,6 +164,13 @@ function UnifiedKYCPage() {
 
     pollCancelRef.current = false;
 
+    const token = getToken();
+    if (!token) {
+      setError('Session expired. Please log in again.');
+      setIsAnalyzing(false);
+      return;
+    }
+
     setIsAnalyzing(true);
     setError(null);
     setResults(null);
@@ -170,8 +179,6 @@ function UnifiedKYCPage() {
     setFeedbackSubmitted({});
     setVideoJobId(null);
     setVideoElapsedSec(0);
-
-    const token = getToken();
     const analysisResults = { video: null, document: null, face: null };
 
     try {
@@ -210,7 +217,13 @@ function UnifiedKYCPage() {
         headers: { 'Authorization': 'Bearer ' + token },
         body: docForm
       });
-      analysisResults.document = await docRes.json();
+      const { data: docData, rawText: docRaw } = await safeReadJson(docRes);
+      if (!docRes.ok) {
+        const detail = (docData && (docData.detail || docData.error)) || docRaw || `Request failed (HTTP ${docRes.status})`;
+        if (docRes.status === 401) throw new Error('Session expired. Please log in again.');
+        throw new Error(`Document verification failed (HTTP ${docRes.status}). ${detail}`);
+      }
+      analysisResults.document = docData;
 
       // Step 3: Face Matching
       setProgress('Matching face with ID...');
@@ -223,7 +236,13 @@ function UnifiedKYCPage() {
         headers: { 'Authorization': 'Bearer ' + token },
         body: faceForm
       });
-      analysisResults.face = await faceRes.json();
+      const { data: faceData, rawText: faceRaw } = await safeReadJson(faceRes);
+      if (!faceRes.ok) {
+        const detail = (faceData && (faceData.detail || faceData.error)) || faceRaw || `Request failed (HTTP ${faceRes.status})`;
+        if (faceRes.status === 401) throw new Error('Session expired. Please log in again.');
+        throw new Error(`Face match failed (HTTP ${faceRes.status}). ${detail}`);
+      }
+      analysisResults.face = faceData;
 
       setProgress('');
       setVideoJobId(null);

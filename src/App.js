@@ -24,7 +24,8 @@ function App() {
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
-          <Route path="/usecases" element={<UseCasesPage />} />
+          <Route path="/use-cases" element={<UseCasesPage />} />
+          <Route path="/usecases" element={<Navigate to="/use-cases" replace />} />
           <Route path="/newsletter" element={<NewsletterPage />} />
           <Route path="/beta" element={<BetaLoginPage />} />
 
@@ -32,6 +33,7 @@ function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
 
           <Route path="/unified" element={<UnifiedKYCPage />} />
+          <Route path="/unified-kyc" element={<UnifiedKYCPage />} />
           <Route path="/kyc" element={<UnifiedKYCPage />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
