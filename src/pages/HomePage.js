@@ -24,6 +24,7 @@ function HomePage() {
         const res = await fetch(API_BASE + '/api/v1/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ email: 'test@test.com', password: 'test123' })
         });
         if (res.ok) {
