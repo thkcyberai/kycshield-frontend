@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 function LoginPage() {
@@ -8,6 +8,7 @@ function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
 
   const API_BASE = 'https://api.kycshield.ai';
@@ -34,7 +35,8 @@ function LoginPage() {
       // Store access token in memory only
       login(data.access_token);
 
-      navigate('/dashboard');
+      const next = searchParams.get('next');
+      navigate(next ? decodeURIComponent(next) : '/dashboard');
     } catch (err) {
       setError(err.message || 'Login failed');
     } finally {
