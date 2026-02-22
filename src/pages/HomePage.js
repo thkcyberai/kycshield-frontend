@@ -7,7 +7,7 @@ function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const navigate = useNavigate();
-  const { accessToken } = useAuth();
+  const { accessToken, isBootstrapping } = useAuth();
   const hasAutoLoggedIn = useRef(false);
   const API_BASE = 'https://api.kycshield.ai';
 
@@ -23,7 +23,7 @@ function HomePage() {
 
   useEffect(() => {
     const autoLogin = async () => {
-      if (hasAutoLoggedIn.current || accessToken) return;
+      if (hasAutoLoggedIn.current || isBootstrapping || accessToken) return;
       hasAutoLoggedIn.current = true;
       try {
         const res = await fetch(API_BASE + '/api/v1/auth/login', {
@@ -43,7 +43,7 @@ function HomePage() {
       }
     };
     autoLogin();
-  }, [accessToken]);
+  }, [accessToken, isBootstrapping]);
 
   const handleTryDemo = () => {
     navigate('/dashboard');

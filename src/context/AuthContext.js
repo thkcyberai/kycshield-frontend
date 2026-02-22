@@ -10,6 +10,7 @@ export const AuthProvider = ({ children }) => {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
 
   const hasBootstrapped = useRef(false);
+  const refreshInFlight = useRef(null);
 
   const login = (token) => {
     setAccessToken(token);
@@ -38,29 +39,39 @@ export const AuthProvider = ({ children }) => {
         // If we already have a token (fresh login), don't refresh.
         if (accessToken) return;
 
-        // Yield so cookie jar commits before first refresh attempt.
-        await yieldToBrowser();
-
-        let res = await refreshOnce();
-
-        // Race safety: first refresh can 401 before cookie is attached.
-        if (!res.ok && res.status === 401) {
-          await yieldToBrowser();
-          res = await refreshOnce();
-        }
-
-        if (!res.ok) {
-          if (!cancelled) setAccessToken(null);
+        if (refreshInFlight.current) {
+          await refreshInFlight.current;
           return;
         }
 
-        const data = await res.json();
-        if (!cancelled && data && data.access_token) {
-          setAccessToken(data.access_token);
-        }
+        refreshInFlight.current = (async () => {
+          // Yield so cookie jar commits before first refresh attempt.
+          await yieldToBrowser();
+
+          let res = await refreshOnce();
+
+          // Race safety: first refresh can 401 before cookie is attached.
+          if (!res.ok && res.status === 401) {
+            await yieldToBrowser();
+            res = await refreshOnce();
+          }
+
+          if (!res.ok) {
+            if (!cancelled) setAccessToken(null);
+            return;
+          }
+
+          const data = await res.json();
+          if (!cancelled && data && data.access_token) {
+            setAccessToken(data.access_token);
+          }
+        })();
+
+        await refreshInFlight.current;
       } catch {
         if (!cancelled) setAccessToken(null);
       } finally {
+        refreshInFlight.current = null;
         if (!cancelled) setIsBootstrapping(false);
       }
     };
