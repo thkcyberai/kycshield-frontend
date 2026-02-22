@@ -45,19 +45,12 @@ export const AuthProvider = ({ children }) => {
         }
 
         refreshInFlight.current = (async () => {
-          // Yield so cookie jar commits before first refresh attempt.
-          await yieldToBrowser();
+          // Delay so cookie jar commits before first refresh attempt.
+          await new Promise((resolve) => setTimeout(resolve, 500));
 
           let res = await refreshOnce();
 
-          // Race safety: first refresh can 401 before cookie is attached.
-          if (!res.ok && res.status === 401) {
-            await yieldToBrowser();
-            res = await refreshOnce();
-          }
-
           if (!res.ok) {
-            if (!cancelled) setAccessToken(null);
             return;
           }
 
