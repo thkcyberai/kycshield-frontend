@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 function HomePage() {
   const [isReady, setIsReady] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const navigate = useNavigate();
+  const { accessToken } = useAuth();
+  const hasAutoLoggedIn = useRef(false);
   const API_BASE = 'https://api.kycshield.ai';
 
   // Responsive hook
@@ -20,6 +23,8 @@ function HomePage() {
 
   useEffect(() => {
     const autoLogin = async () => {
+      if (hasAutoLoggedIn.current || accessToken) return;
+      hasAutoLoggedIn.current = true;
       try {
         const res = await fetch(API_BASE + '/api/v1/auth/login', {
           method: 'POST',
@@ -38,7 +43,7 @@ function HomePage() {
       }
     };
     autoLogin();
-  }, []);
+  }, [accessToken]);
 
   const handleTryDemo = () => {
     navigate('/dashboard');
