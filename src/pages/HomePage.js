@@ -23,6 +23,7 @@ function HomePage() {
 
   useEffect(() => {
     const autoLogin = async () => {
+      if (process.env.REACT_APP_DEMO_AUTOLOGIN !== 'true') return;
       if (hasAutoLoggedIn.current || isBootstrapping || accessToken) return;
       hasAutoLoggedIn.current = true;
       try {

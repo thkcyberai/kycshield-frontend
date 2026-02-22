@@ -16,8 +16,17 @@ export const AuthProvider = ({ children }) => {
     setAccessToken(token);
   };
 
-  const logout = () => {
-    setAccessToken(null);
+  const logout = async () => {
+    try {
+      await fetch(API_BASE + '/api/v1/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch {
+      // Best-effort; still clear local auth state
+    } finally {
+      setAccessToken(null);
+    }
   };
 
   useEffect(() => {
